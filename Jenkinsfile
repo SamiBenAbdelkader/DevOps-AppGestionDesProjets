@@ -15,6 +15,23 @@ pipeline {
             }
         }
 
+        stage('Test Backend') {
+            steps {
+                dir('backend') {
+                    sh 'chmod +x mvnw'
+                    sh 'docker rm -f mysql-test-ci || true'
+                    sh 'docker run -d --name mysql-test-ci -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=test_db -p 3307:3306 mysql:8.0'
+                    sh 'sleep 20'
+                    sh 'SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3307/test_db ./mvnw test'
+                }
+            }
+            post {
+                always {
+                    sh 'docker rm -f mysql-test-ci || true'
+                }
+            }
+        }
+
         stage('Build Backend Image') {
             steps {
                 dir('backend') {
@@ -57,7 +74,7 @@ pipeline {
             sh 'docker logout'
         }
         success {
-            echo 'Images buildées et pushées avec succès !'
+            echo 'Tests passés, images buildées et pushées avec succès !'
         }
         failure {
             echo 'Le pipeline a échoué.'
